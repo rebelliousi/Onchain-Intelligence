@@ -25,18 +25,25 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
-      <body className={inter.variable}>
+      {/* 
+        FIX 1: Added background: #000000 here to ensure no white ever shows 
+      */}
+      <body className={inter.variable} style={{ background: '#000000', margin: 0 }}>
         <Providers>
           {/* Custom glowing cursor */}
           <CustomCursor />
 
-          {/* Film grain overlay - always on top */}
+          {/* 
+            FIX 2: LOWERED Z-INDEX TO 50. 
+            This keeps the grain visible on the background, 
+            but allows the Navbar (zIndex 9999) to sit safely on top.
+          */}
           <div
             aria-hidden="true"
             style={{
               position: 'fixed',
               inset: 0,
-              zIndex: 9998,
+              zIndex: 50, 
               pointerEvents: 'none',
               opacity: 0.035,
               backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,

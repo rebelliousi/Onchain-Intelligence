@@ -8,142 +8,130 @@ export default function Navbar() {
 
   useEffect(() => {
     const onScroll = () => {
-      setScrolled(window.scrollY > 50)
+      setScrolled(window.scrollY > 20)
     }
     window.addEventListener('scroll', onScroll)
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
   return (
-    <nav
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 1000,
-        height: '80px',
-        display: 'flex',
-        alignItems: 'center',
-        padding: '0 3rem',
-        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-        // Glass effect
-        background: scrolled ? 'rgba(5, 5, 5, 0.8)' : 'transparent',
-        backdropFilter: scrolled ? 'blur(16px)' : 'none',
-        WebkitBackdropFilter: scrolled ? 'blur(16px)' : 'none',
-        borderBottom: scrolled ? '1px solid rgba(255,255,255,0.08)' : '1px solid transparent',
-      }}
-    >
-      {/* 1. LEFT - Logo (flex-1 ensures it takes space) */}
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start' }}>
-        <Link href="/" style={{ textDecoration: 'none' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{
-              fontSize: '1.3rem',
-              fontWeight: 800,
-              color: '#FFFFFF',
-              letterSpacing: '0.2em',
-            }}>
-              AURA
-            </span>
-            <span style={{
-              width: '6px',
-              height: '6px',
-              borderRadius: '50%',
-              background: '#00FFD1',
-              boxShadow: '0 0 12px #00FFD1',
-            }} />
-          </div>
-        </Link>
+    <nav className={`navbar ${scrolled ? 'scrolled' : ''}`}>
+      <Link href="/" className="logo-container">
+        <span className="logo-text">AURA</span>
+        <span className="logo-dot" />
+      </Link>
+
+      <div className="nav-links">
+        <NavLink href="#dashboard">Dashboard</NavLink>
+        <NavLink href="#guardian">AI Sentinel</NavLink>
+        <NavLink href="https://t.me/yourlink" target="_blank">Telegram</NavLink>
       </div>
 
-      {/* 2. CENTER - Navigation Links (The Absolute Center) */}
-      <div style={{
-        display: 'flex',
-        gap: '2.5rem',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
-        {['Dashboard', 'Security', 'AI Sentinel'].map((link) => (
-          <NavLink key={link} href={`/${link.toLowerCase().replace(' ', '-')}`}>
-            {link}
-          </NavLink>
-        ))}
-      </div>
+      <style jsx>{`
+        .navbar {
+          position: fixed;
+          top: 0;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 100%;
+          height: 90px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0 4rem;
+          z-index: 9999; 
+          transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+          background: transparent;
+          
+          /* REMOVED: border-bottom: 1px solid transparent; */
+          /* ADDED: Explicitly no border to stop the white line */
+          border: none !important;
+          outline: none !important;
+        }
 
-      {/* 3. RIGHT - Actions (flex-1 matches the left side) */}
-      <div style={{ 
-        flex: 1, 
-        display: 'flex', 
-        justifyContent: 'flex-end', 
-        alignItems: 'center', 
-        gap: '2rem' 
-      }}>
-        <div className="hidden lg:flex" style={{ gap: '2rem' }}>
-          {['Telegram', 'Mission'].map((link) => (
-            <NavLink key={link} href={`/${link.toLowerCase()}`}>
-              {link}
-            </NavLink>
-          ))}
-        </div>
+        .navbar.scrolled {
+          top: 20px;
+          width: 90%;
+          max-width: 1200px;
+          height: 64px;
+          border-radius: 20px;
+          padding: 0 2.5rem;
+          background: rgba(0, 0, 0, 0.85); 
+          backdrop-filter: blur(15px);
+          -webkit-backdrop-filter: blur(15px);
+          /* Using a purely black border so no light reflects */
+          border: 1px solid #000000; 
+          box-shadow: 0 15px 35px rgba(0, 0, 0, 0.8);
+        }
 
-        {/* Enter App Button */}
-        <Link href="/dashboard" style={{ textDecoration: 'none' }}>
-          <button style={{
-            padding: '10px 24px',
-            borderRadius: '100px',
-            border: '1px solid rgba(0, 255, 209, 0.4)',
-            background: 'rgba(0, 255, 209, 0.08)',
-            color: '#00FFD1',
-            fontSize: '0.75rem',
-            fontWeight: 600,
-            letterSpacing: '0.15em',
-            cursor: 'none',
-            transition: 'all 0.3s ease',
-            whiteSpace: 'nowrap'
-          }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLButtonElement).style.background = 'rgba(0, 255, 209, 0.2)'
-              ;(e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 25px rgba(0,255,209,0.3)'
-              ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(0, 255, 209, 0.8)'
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLButtonElement).style.background = 'rgba(0, 255, 209, 0.08)'
-              ;(e.currentTarget as HTMLButtonElement).style.boxShadow = 'none'
-              ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(0, 255, 209, 0.4)'
-            }}
-          >
-            ENTER APP
-          </button>
-        </Link>
-      </div>
+        .logo-container {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          text-decoration: none;
+          /* Move logo slightly right to stop the glow clipping in the corner */
+          margin-left: 5px; 
+        }
+
+        .logo-text {
+          font-size: 1.2rem;
+          font-weight: 900;
+          color: #00ffd1; 
+          letter-spacing: 0.4em;
+        }
+
+        .logo-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #00ffd1;
+          /* Reduced shadow spread to stop corner artifacts */
+          box-shadow: 0 0 10px #00ffd1;
+        }
+
+        .nav-links {
+          display: flex;
+          gap: 3rem;
+          align-items: center;
+        }
+
+        @media (max-width: 768px) {
+          .navbar { padding: 0 1.5rem; }
+          .nav-links { display: none; }
+        }
+      `}</style>
     </nav>
   )
 }
 
-function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+function NavLink({ href, children, target }: { href: string; children: React.ReactNode; target?: string }) {
   return (
-    <Link href={href} style={{ textDecoration: 'none' }}>
-      <span style={{
-        fontSize: '0.8rem',
-        fontWeight: 400,
-        color: 'rgba(255,255,255,0.5)',
-        letterSpacing: '0.1em',
-        transition: 'all 0.3s ease',
-        cursor: 'none',
-        whiteSpace: 'nowrap'
-      }}
-        onMouseEnter={e => {
-          (e.target as HTMLElement).style.color = '#00FFD1'
-          ;(e.target as HTMLElement).style.textShadow = '0 0 10px rgba(0,255,209,0.5)'
-        }}
-        onMouseLeave={e => {
-          (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.5)'
-          ;(e.target as HTMLElement).style.textShadow = 'none'
-        }}
-      >
-        {children}
-      </span>
-    </Link>
+    <a href={href} target={target} className="nav-link-item">
+      {children}
+      <style jsx>{`
+        .nav-link-item {
+          position: relative;
+          text-decoration: none;
+          font-size: 0.7rem;
+          font-weight: 600;
+          color: rgba(0, 255, 209, 0.6); 
+          letter-spacing: 0.25em;
+          text-transform: uppercase;
+          transition: color 0.3s ease;
+        }
+        .nav-link-item:hover { color: #00ffd1; }
+        .nav-link-item::after {
+          content: '';
+          position: absolute;
+          bottom: -6px;
+          left: 0;
+          width: 0;
+          height: 1px;
+          background: #00ffd1;
+          transition: width 0.3s ease;
+        }
+        .nav-link-item:hover::after { width: 100%; }
+      `}</style>
+    </a>
   )
 }

@@ -16,7 +16,7 @@ export default function Home() {
       <BentoGrid />  
       <GuardianSection />
       <PulseSection/>
-      <DashboardPage/>
+    
       <Footer/>
     </main>
   )
