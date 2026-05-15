@@ -22,8 +22,10 @@ export default function Navbar() {
       </Link>
 
       <div className="nav-links">
-        <NavLink href="#dashboard">Dashboard</NavLink>
+        {/* FIX: Changed #dashboard to /dashboard to match your file structure */}
+        <NavLink href="/dashboard">Dashboard</NavLink>
         
+        {/* External link keeps target="_blank" */}
         <NavLink href="https://t.me/yourlink" target="_blank">Telegram</NavLink>
       </div>
 
@@ -42,9 +44,6 @@ export default function Navbar() {
           z-index: 9999; 
           transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
           background: transparent;
-          
-          /* REMOVED: border-bottom: 1px solid transparent; */
-          /* ADDED: Explicitly no border to stop the white line */
           border: none !important;
           outline: none !important;
         }
@@ -59,7 +58,6 @@ export default function Navbar() {
           background: rgba(0, 0, 0, 0.85); 
           backdrop-filter: blur(15px);
           -webkit-backdrop-filter: blur(15px);
-          /* Using a purely black border so no light reflects */
           border: 1px solid #000000; 
           box-shadow: 0 15px 35px rgba(0, 0, 0, 0.8);
         }
@@ -69,7 +67,6 @@ export default function Navbar() {
           align-items: center;
           gap: 12px;
           text-decoration: none;
-          /* Move logo slightly right to stop the glow clipping in the corner */
           margin-left: 5px; 
         }
 
@@ -85,7 +82,6 @@ export default function Navbar() {
           height: 6px;
           border-radius: 50%;
           background: #00ffd1;
-          /* Reduced shadow spread to stop corner artifacts */
           box-shadow: 0 0 10px #00ffd1;
         }
 
@@ -105,9 +101,21 @@ export default function Navbar() {
 }
 
 function NavLink({ href, children, target }: { href: string; children: React.ReactNode; target?: string }) {
+  // Check if it's an internal route or external URL
+  const isInternal = href.startsWith('/');
+
   return (
-    <a href={href} target={target} className="nav-link-item">
-      {children}
+    <>
+      {isInternal ? (
+        <Link href={href} className="nav-link-item">
+          {children}
+        </Link>
+      ) : (
+        <a href={href} target={target} rel="noopener noreferrer" className="nav-link-item">
+          {children}
+        </a>
+      )}
+      
       <style jsx>{`
         .nav-link-item {
           position: relative;
@@ -118,6 +126,8 @@ function NavLink({ href, children, target }: { href: string; children: React.Rea
           letter-spacing: 0.25em;
           text-transform: uppercase;
           transition: color 0.3s ease;
+          cursor: pointer;
+          display: inline-block;
         }
         .nav-link-item:hover { color: #00ffd1; }
         .nav-link-item::after {
@@ -132,6 +142,6 @@ function NavLink({ href, children, target }: { href: string; children: React.Rea
         }
         .nav-link-item:hover::after { width: 100%; }
       `}</style>
-    </a>
+    </>
   )
 }
