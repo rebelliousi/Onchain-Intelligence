@@ -1,9 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
+// --- DATA TYPES ---
+
 export type DashboardStats = {
   volume: string;
-  activeNodes: string;
+  topGainer: string; // Real mooning token info
   latency: string;
   tps: string;
   chartData: { time: string; load: number }[];
@@ -19,12 +21,23 @@ export type SmartMoneyToken = {
   load: number;
 };
 
+// --- THE HOOKS ---
+
+/**
+ * Hook: Dashboard High-Level Metrics
+ * Fetches Volume (BENTO_2) and Top Gainer (GAINER) in parallel.
+ */
 export function useDashboardStats() {
   return useQuery<DashboardStats>({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
-      const res = await axios.get('/api/market/stats');
-      
+      // 1. Fetch from our dedicated API routes in parallel
+      const [resStats, resGainer] = await Promise.all([
+        axios.get('/api/market/stats'),
+        axios.get('/api/market/top-gainer')
+      ]);
+
+      // 2. Generate smooth neural chart points
       const chartPoints = [
         { time: '04:00', load: Math.floor(Math.random() * 20 + 30) },
         { time: '08:00', load: Math.floor(Math.random() * 20 + 50) },
@@ -35,19 +48,26 @@ export function useDashboardStats() {
       ];
 
       return {
-        volume: res.data.volume || "$2.4B",
-        activeNodes: "48",
-        latency: (Math.random() * (18 - 12) + 12).toFixed(1) + "ms",
-        tps: (Math.floor(Math.random() * (2800 - 2200) + 2200)).toLocaleString(),
+        volume: resStats.data.volume || "$2.4B",
+        // Combine Symbol and % change for the UI box
+        topGainer: `${resGainer.data.symbol} (${resGainer.data.change})`,
+        latency: resStats.data.latency || "14.2ms",
+        tps: resStats.data.tps || "2,105",
         chartData: chartPoints
       };
     },
+    // PROTECTION: Refresh every 60 seconds (Safe for your Monthly budget)
     refetchInterval: 60000, 
     staleTime: 55000,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: false, // 🚨 STOPS multiple requests when clicking
+    placeholderData: (prev) => prev, // Smooth UI transitions
   });
 }
 
+/**
+ * Hook: Smart Money Leaderboard (DASHBOARD Key)
+ * Tracking profitable accumulation.
+ */
 export function useSmartMoney() {
   return useQuery<SmartMoneyToken[]>({
     queryKey: ['smart-money'],
@@ -55,8 +75,11 @@ export function useSmartMoney() {
       const response = await axios.get('/api/market/smart-money');
       return response.data;
     },
+    // Smart money moves slower - Refresh every 5 minutes to save credits
     refetchInterval: 300000, 
     staleTime: 290000,
     refetchOnWindowFocus: false,
+    retry: false,
+    placeholderData: (prev) => prev,
   });
 }
