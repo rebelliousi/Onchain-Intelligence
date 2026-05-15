@@ -5,6 +5,8 @@ import NetworkSection from '@/components/sections/Network'
 import GuardianSection from '@/components/sections/Guardian'
 import PulseSection from '@/components/sections/Pulse'
 import Footer from '@/components/sections/Footer'
+import DashboardPage from './dashboard/page'
+import Dashboard from '@/components/sections/Dashboard'
 
 export default function Home() {
   return (
@@ -14,6 +16,7 @@ export default function Home() {
       <BentoGrid />  
       <GuardianSection />
       <PulseSection/>
+      <DashboardPage/>
       <Footer/>
     </main>
   )
