@@ -23,7 +23,7 @@ export default function Navbar() {
 
       <div className="nav-links">
         <NavLink href="#dashboard">Dashboard</NavLink>
-        <NavLink href="#guardian">AI Sentinel</NavLink>
+        
         <NavLink href="https://t.me/yourlink" target="_blank">Telegram</NavLink>
       </div>
 
