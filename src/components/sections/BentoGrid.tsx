@@ -1,453 +1,262 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { Shield, TrendingUp, Zap, Radio } from 'lucide-react'
+import { Shield, TrendingUp, Zap, Radio, Activity, Globe, Wifi, Terminal, Clock } from 'lucide-react'
+
+// Import our live hooks
+import { 
+  useTrendingTokens, 
+  useNewListings, 
+  useMarketStats 
+} from '@/hooks/useMarketData'
 
 gsap.registerPlugin(ScrollTrigger)
 
-// ── Static fake data ──────────────────────────────────────
-const TRENDING = [
-  { name: '$BONK',  price: '$0.0000234', change: '+12.4%', up: true  },
-  { name: '$WIF',   price: '$2.341',     change: '+8.7%',  up: true  },
-  { name: '$POPCAT',price: '$0.821',     change: '-3.2%',  up: false },
-  { name: '$MEW',   price: '$0.00912',   change: '+21.1%', up: true  },
-  { name: '$BOME',  price: '$0.00741',   change: '-1.4%',  up: false },
-]
-
-const NEW_LISTINGS = [
-  { name: '$AURA',  score: 98, status: 'SAFE'   },
-  { name: '$NOVA',  score: 91, status: 'SAFE'   },
-  { name: '$FLOKI', score: 44, status: 'RISK'   },
-  { name: '$LUNAR', score: 87, status: 'SAFE'   },
-]
-
-// ── Animation variants ────────────────────────────────────
-const containerVariants = {
-  hidden: {},
-  visible: {
-    transition: { staggerChildren: 0.12 },
-  },
-}
-
-const boxVariants = {
-  hidden: { opacity: 0, y: 60, scale: 0.96 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] },
-  },
-}
-
-// ── Shared glass box style ────────────────────────────────
+// --- Shared Glass Style ---
 const glassStyle: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.03)',
-  backdropFilter: 'blur(12px)',
-  WebkitBackdropFilter: 'blur(12px)',
-  border: '1px solid rgba(255,255,255,0.07)',
-  borderRadius: '20px',
+  background: 'rgba(255,255,255,0.02)',
+  backdropFilter: 'blur(15px)',
+  WebkitBackdropFilter: 'blur(15px)',
+  border: '1px solid rgba(255,255,255,0.06)',
+  borderRadius: '24px',
   padding: '24px',
   overflow: 'hidden',
   position: 'relative',
+  height: '100%', 
+  display: 'flex',
+  flexDirection: 'column'
 }
 
 export default function BentoGrid() {
-  const sectionRef = useRef<HTMLElement>(null)
+  const gridRef = useRef(null)
   const headlineRef = useRef<HTMLDivElement>(null)
-  const ref = useRef(null)
-  const inView = useInView(ref, { once: true, margin: '-100px' })
+  const inView = useInView(gridRef, { once: true, margin: '-100px' })
 
-  // GSAP headline animation
+  // 1. DATA FETCHING (Using real hooks)
+  const { data: trending, isLoading: loadingTrending } = useTrendingTokens()
+  const { data: listings } = useNewListings()
+  const { data: stats } = useMarketStats()
+
+  // Slicing larger amounts to fill the long vertical columns
+  const trendingList = trending?.slice(0, 7) || []
+  const listingsList = listings?.slice(0, 6) || []
+
+  // 2. SIMULATED LIVE DATA (To fill HUD gaps)
+  const [blockHeight, setBlockHeight] = useState(284910242)
+  useEffect(() => {
+    const interval = setInterval(() => setBlockHeight(prev => prev + Math.floor(Math.random() * 2)), 1500)
+    return () => clearInterval(interval)
+  }, [])
+
+  // 3. GSAP ANIMATIONS
   useEffect(() => {
     if (!headlineRef.current) return
-
     gsap.fromTo(
       headlineRef.current.querySelectorAll('.gsap-word'),
-      { opacity: 0, y: 50, skewY: 4 },
-      {
-        opacity: 1,
-        y: 0,
-        skewY: 0,
-        duration: 1,
-        stagger: 0.1,
-        ease: 'power4.out',
-        scrollTrigger: {
-          trigger: headlineRef.current,
-          start: 'top 80%',
-        },
-      }
+      { opacity: 0, y: 30 },
+      { opacity: 1, y: 0, duration: 0.8, stagger: 0.1, ease: 'power3.out', scrollTrigger: { trigger: headlineRef.current, start: 'top 85%' } }
     )
   }, [])
 
-  // GSAP number counter for security score
+  // SAFE SCORE COUNTER
   useEffect(() => {
     const el = document.getElementById('security-score')
-    if (!el) return
-
-    ScrollTrigger.create({
-      trigger: el,
-      start: 'top 80%',
-      onEnter: () => {
-        gsap.fromTo(
-          { val: 0 },
-          {
-            val: 95,
-            duration: 2,
-            ease: 'power2.out',
-            onUpdate: function () {
-              el.textContent = Math.round(this.targets()[0].val).toString()
-            },
-          }
-        )
-      },
+    if (!el || !stats?.score) return
+    const counterObj = { val: parseInt(el.textContent || "0") }
+    gsap.to(counterObj, {
+      val: stats.score,
+      duration: 2,
+      ease: 'power2.out',
+      onUpdate: () => { if (el) el.textContent = Math.round(counterObj.val).toString() }
     })
-  }, [])
-
-  // GSAP latency counter
-  useEffect(() => {
-    const el = document.getElementById('latency-val')
-    if (!el) return
-
-    ScrollTrigger.create({
-      trigger: el,
-      start: 'top 80%',
-      onEnter: () => {
-        gsap.fromTo(
-          { val: 500 },
-          {
-            val: 0.1,
-            duration: 1.8,
-            ease: 'power3.out',
-            onUpdate: function () {
-              const v = this.targets()[0].val
-              el.textContent = v < 1 ? v.toFixed(1) : Math.round(v).toString()
-            },
-          }
-        )
-      },
-    })
-  }, [])
+  }, [stats?.score])
 
   return (
-    <section
-      ref={sectionRef}
-      style={{
-        background: '#050505',
-        padding: '120px 5vw',
-        position: 'relative',
-        overflow: 'hidden',
-      }}
-    >
-      {/* Background mesh */}
-      <div style={{
-        position: 'absolute', inset: 0, pointerEvents: 'none',
-        background: `
-          radial-gradient(ellipse 50% 50% at 80% 20%, rgba(139,92,246,0.07) 0%, transparent 70%),
-          radial-gradient(ellipse 40% 40% at 20% 80%, rgba(0,255,209,0.05) 0%, transparent 70%)
-        `,
-      }} />
+    <section style={{ background: '#050505', padding: '100px 5vw', position: 'relative', overflow: 'hidden' }}>
+      
+      {/* Background Mesh */}
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: `radial-gradient(ellipse 50% 50% at 80% 20%, rgba(139,92,246,0.05) 0%, transparent 70%), radial-gradient(ellipse 40% 40% at 20% 80%, rgba(0,255,209,0.04) 0%, transparent 70%)` }} />
 
-      {/* Section headline */}
-      <div ref={headlineRef} style={{ textAlign: 'center', marginBottom: '64px' }}>
-        <span className="gsap-word" style={{
-          display: 'inline-block', opacity: 0,
-          fontSize: '0.7rem', fontWeight: 300,
-          letterSpacing: '0.4em', color: '#00FFD1',
-          textTransform: 'uppercase', marginBottom: '16px',
-        }}>
-          THE LOGIC
-        </span>
-
-        <div style={{ overflow: 'hidden' }}>
-          <h2 className="gsap-word" style={{
-            display: 'block', opacity: 0,
-            fontSize: 'clamp(2.5rem, 6vw, 5rem)',
-            fontWeight: 700, color: '#FFFFFF',
-            lineHeight: 1.1, letterSpacing: '-0.02em',
-          }}>
-            Raw Data.
-          </h2>
-          <h2 className="gsap-word" style={{
-            display: 'block', opacity: 0,
-            fontSize: 'clamp(2.5rem, 6vw, 5rem)',
-            fontWeight: 100, color: 'rgba(255,255,255,0.4)',
-            lineHeight: 1.1, letterSpacing: '-0.02em',
-          }}>
-            Pure Intelligence.
-          </h2>
-        </div>
-
-        <p className="gsap-word" style={{
-          opacity: 0, marginTop: '20px',
-          fontSize: '0.9rem', fontWeight: 300,
-          color: 'rgba(255,255,255,0.4)', letterSpacing: '0.05em',
-        }}>
-          Powered by Birdeye. Every token. Every trade. Every second.
-        </p>
+      {/* Header */}
+      <div ref={headlineRef} style={{ textAlign: 'center', marginBottom: '80px' }}>
+        <span className="gsap-word" style={{ display: 'inline-block', fontSize: '0.65rem', letterSpacing: '0.5em', color: '#00FFD1', textTransform: 'uppercase', marginBottom: '16px' }}>THE LOGIC</span>
+        <h2 className="gsap-word" style={{ fontSize: 'clamp(2rem, 5vw, 4rem)', fontWeight: 800, color: '#fff', lineHeight: 1.1 }}>Raw Data. <span style={{ color: 'rgba(255,255,255,0.2)', fontWeight: 300 }}>Pure Intelligence.</span></h2>
       </div>
 
-      {/* BENTO GRID */}
+      {/* --- GRID START --- */}
       <motion.div
-        ref={ref}
-        variants={containerVariants}
-        initial="hidden"
-        animate={inView ? 'visible' : 'hidden'}
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gridTemplateRows: 'auto auto',
-          gap: '16px',
-          maxWidth: '1200px',
-          margin: '0 auto',
+        ref={gridRef}
+        style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(3, 1fr)', 
+          gridTemplateRows: '400px 220px 240px', // Precise row sizing to eliminate gaps
+          gap: '16px', 
+          maxWidth: '1200px', 
+          margin: '0 auto' 
         }}
       >
-
-        {/* BOX 1 — TRENDING NOW (big, spans 2 rows) */}
-        <motion.div variants={boxVariants} style={{
-          ...glassStyle,
-          gridColumn: '1',
-          gridRow: '1 / 3',
-        }}>
-          <TrendGlow />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-            <TrendingUp size={14} color="#00FFD1" />
-            <span style={{ fontSize: '0.65rem', letterSpacing: '0.3em', color: '#00FFD1', fontWeight: 400 }}>
-              TRENDING NOW
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {TRENDING.map((token, i) => (
-              <motion.div
-                key={token.name}
-                initial={{ opacity: 0, x: -20 }}
-                animate={inView ? { opacity: 1, x: 0 } : {}}
-                transition={{ delay: 0.4 + i * 0.1, duration: 0.5 }}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '10px 12px',
-                  borderRadius: '10px',
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.05)',
-                }}
-              >
-                <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#fff' }}>
-                  {token.name}
-                </span>
-                <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
-                  {token.price}
-                </span>
-                <span style={{
-                  fontSize: '0.75rem', fontWeight: 600,
-                  color: token.up ? '#00FFD1' : '#FF4D4D',
-                }}>
-                  {token.change}
-                </span>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* BOX 2 — SECURITY SHIELD */}
-        <motion.div variants={boxVariants} style={{
-          ...glassStyle,
-          gridColumn: '2',
-          gridRow: '1',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          textAlign: 'center',
-          minHeight: '220px',
-        }}>
-          <ShieldGlow />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-            <Shield size={14} color="#00FFD1" />
-            <span style={{ fontSize: '0.65rem', letterSpacing: '0.3em', color: '#00FFD1' }}>
-              SECURITY SHIELD
-            </span>
-          </div>
-
-          {/* Big score number */}
-          <div style={{ position: 'relative' }}>
-            <span id="security-score" style={{
-              fontSize: '4rem', fontWeight: 700,
-              color: '#00FFD1',
-              textShadow: '0 0 40px rgba(0,255,209,0.4)',
-              lineHeight: 1,
-            }}>
-              0
-            </span>
-            <span style={{ fontSize: '1.5rem', color: 'rgba(255,255,255,0.3)', fontWeight: 200 }}>
-              /100
-            </span>
-          </div>
-          <span style={{
-            marginTop: '8px', fontSize: '0.7rem',
-            color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em',
-          }}>
-            AVG SAFETY SCORE
-          </span>
-        </motion.div>
-
-        {/* BOX 3 — NEW LISTINGS */}
-        <motion.div variants={boxVariants} style={{
-          ...glassStyle,
-          gridColumn: '3',
-          gridRow: '1 / 3',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-            <Radio size={14} color="#8B5CF6" />
-            <span style={{ fontSize: '0.65rem', letterSpacing: '0.3em', color: '#8B5CF6' }}>
-              NEW LISTINGS
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {NEW_LISTINGS.map((token, i) => (
-              <motion.div
-                key={token.name}
-                initial={{ opacity: 0, x: 20 }}
-                animate={inView ? { opacity: 1, x: 0 } : {}}
-                transition={{ delay: 0.5 + i * 0.12, duration: 0.5 }}
-                style={{
-                  padding: '14px 16px',
-                  borderRadius: '12px',
-                  background: 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${token.status === 'SAFE' ? 'rgba(0,255,209,0.15)' : 'rgba(255,184,0,0.15)'}`,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fff' }}>
-                    {token.name}
+        {/* COLUMN 1: TRENDING (Spans Row 1 & 2) */}
+        <div style={{ gridColumn: '1', gridRow: '1 / 3' }}>
+          <motion.div style={glassStyle}>
+            <TrendGlow />
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <TrendingUp size={14} color="#00FFD1" />
+                <span style={{ fontSize: '0.65rem', letterSpacing: '0.3em', color: '#00FFD1', fontWeight: 600 }}>TRENDING NOW</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {trendingList.map((token, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff' }}>{token.symbol}</div>
+                    <div style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.2)' }}>{token.name?.slice(0, 15)}</div>
                   </div>
-                  <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', marginTop: '2px' }}>
-                    Score: {token.score}/100
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#fff', fontFamily: 'monospace' }}>{token.price}</div>
+                    <div style={{ fontSize: '0.65rem', color: token.up ? '#00FFD1' : '#FF4D4D' }}>{token.change}</div>
                   </div>
                 </div>
-                <span style={{
-                  fontSize: '0.6rem', fontWeight: 600,
-                  letterSpacing: '0.1em', padding: '4px 10px',
-                  borderRadius: '100px',
-                  background: token.status === 'SAFE' ? 'rgba(0,255,209,0.1)' : 'rgba(255,184,0,0.1)',
-                  color: token.status === 'SAFE' ? '#00FFD1' : '#FFB800',
-                  border: `1px solid ${token.status === 'SAFE' ? 'rgba(0,255,209,0.3)' : 'rgba(255,184,0,0.3)'}`,
-                }}>
-                  {token.status}
-                </span>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Latency */}
-          <div style={{
-            marginTop: '20px', padding: '14px',
-            borderRadius: '12px',
-            background: 'rgba(139,92,246,0.08)',
-            border: '1px solid rgba(139,92,246,0.2)',
-            textAlign: 'center',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-              <Zap size={12} color="#8B5CF6" />
-              <span id="latency-val" style={{
-                fontSize: '1.5rem', fontWeight: 700, color: '#8B5CF6',
-              }}>500</span>
-              <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>ms</span>
+              ))}
             </div>
-            <div style={{ fontSize: '0.6rem', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>
-              DATA LATENCY
+          </motion.div>
+        </div>
+
+        {/* COLUMN 2 - TOP: SECURITY SHIELD (Fills Space with Logs) */}
+        <div style={{ gridColumn: '2', gridRow: '1' }}>
+          <motion.div style={{ ...glassStyle, alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+             <ShieldGlow />
+             <Shield size={20} color="#00FFD1" style={{ marginBottom: '10px' }} />
+             <div style={{ fontSize: '6rem', fontWeight: 900, color: '#00FFD1', lineHeight: 1 }} id="security-score">0</div>
+             <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.3em', marginTop: '5px' }}>AURA TRUST INDEX</div>
+             
+             {/* LIVE TERMINAL FILLER */}
+             <div style={{ marginTop: '25px', width: '100%', padding: '15px', borderRadius: '12px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(0,255,209,0.1)', textAlign: 'left' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                    <Terminal size={10} color="#00FFD1" />
+                    <span style={{ fontSize: '0.5rem', color: '#00FFD1', fontFamily: 'monospace' }}>SENTINEL_ACTIVE</span>
+                </div>
+                <div style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                   {`> SYNCING_POOL_METRICS... DONE`} <br />
+                   {`> LATENCY_THRESHOLD: ${stats?.latency}ms`} <br />
+                   {`> SCANNING_MINT_AUTHORITY... OK`}
+                </div>
+             </div>
+          </motion.div>
+        </div>
+
+        {/* COLUMN 2 - MIDDLE: NETWORK LOAD (Fills Middle Gap) */}
+        <div style={{ gridColumn: '2', gridRow: '2' }}>
+          <motion.div style={{ ...glassStyle, background: 'rgba(139,92,246,0.03)', borderColor: 'rgba(139,92,246,0.1)' }}>
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                      <Activity size={14} color="#8B5CF6" />
+                      <span style={{ fontSize: '0.6rem', letterSpacing: '0.2em', color: '#8B5CF6' }}>NETWORK LOAD</span>
+                   </div>
+                   <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#fff' }}>{stats?.tps || "2,423"} <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>TPS</span></div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                   <div style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.2)', marginBottom: '4px' }}>BLOCK HEIGHT</div>
+                   <div style={{ fontSize: '0.8rem', color: '#8B5CF6', fontFamily: 'monospace' }}>{blockHeight.toLocaleString()}</div>
+                </div>
+             </div>
+             <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', marginTop: 'auto', overflow: 'hidden' }}>
+                <motion.div animate={{ width: stats?.tps ? `${(parseInt(stats.tps.replace(',','')) / 3000) * 100}%` : '40%' }} style={{ height: '100%', background: '#8B5CF6' }} />
+             </div>
+          </motion.div>
+        </div>
+
+        {/* COLUMN 3: NEW LISTINGS (Spans Row 1 & 2) */}
+        <div style={{ gridColumn: '3', gridRow: '1 / 3' }}>
+          <motion.div style={glassStyle}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Radio size={14} color="#8B5CF6" />
+                <span style={{ fontSize: '0.65rem', letterSpacing: '0.3em', color: '#8B5CF6' }}>NEW LISTINGS</span>
+              </div>
             </div>
-          </div>
-        </motion.div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+              {listingsList.map((token, i) => (
+                <div key={i} style={{ padding: '12px 14px', borderRadius: '14px', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#fff', fontSize: '0.8rem', fontWeight: 600 }}>{token.name}</span>
+                  <span style={{ fontSize: '0.5rem', padding: '3px 8px', borderRadius: '4px', background: 'rgba(0,255,209,0.05)', color: '#00FFD1', border: '1px solid rgba(0,255,209,0.2)' }}>SAFE</span>
+                </div>
+              ))}
+            </div>
+            
+            <div style={{ marginTop: '20px', padding: '15px', borderRadius: '16px', background: 'rgba(139,92,246,0.04)', border: '1px solid rgba(139,92,246,0.1)', textAlign: 'center' }}>
+               <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#8B5CF6' }}>{stats?.latency || '14.0'}<span style={{ fontSize: '0.7rem', opacity: 0.5, marginLeft: '4px' }}>ms</span></div>
+               <div style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.2em' }}>DATA LATENCY</div>
+            </div>
+          </motion.div>
+        </div>
 
-        {/* BOX 4 — VOLUME PULSE */}
-        <motion.div variants={boxVariants} style={{
-          ...glassStyle,
-          gridColumn: '2',
-          gridRow: '2',
-          minHeight: '180px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-            <Zap size={14} color="#FFB800" />
-            <span style={{ fontSize: '0.65rem', letterSpacing: '0.3em', color: '#FFB800' }}>
-              VOLUME PULSE
-            </span>
-          </div>
+        {/* BOTTOM ROW: VOLUME PULSE (Spans Col 1 & 2) */}
+        <div style={{ gridColumn: '1 / 3', gridRow: '3' }}>
+          <motion.div style={glassStyle}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Globe size={14} color="#FFB800" />
+                  <span style={{ fontSize: '0.65rem', letterSpacing: '0.3em', color: '#FFB800' }}>GLOBAL VOLUME PULSE</span>
+               </div>
+               <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFB800' }}>${stats?.volume || "2.4B"}</span>
+            </div>
+            <VolumeBars inView={inView} />
+          </motion.div>
+        </div>
 
-          {/* Mini bar chart */}
-          <VolumeBars inView={inView} />
-
-          <div style={{
-            marginTop: '12px', display: 'flex',
-            justifyContent: 'space-between',
-          }}>
-            <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>24h Volume</span>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#FFB800' }}>$2.4B</span>
-          </div>
-        </motion.div>
+        {/* BOTTOM ROW: SYSTEM STATUS (Spans Col 3) */}
+        <div style={{ gridColumn: '3', gridRow: '3' }}>
+           <motion.div style={{ ...glassStyle, background: 'rgba(0,255,209,0.02)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px' }}>
+                 <Wifi size={12} color="#00FFD1" />
+                 <div style={{ fontSize: '0.55rem', letterSpacing: '0.3em', color: 'rgba(255,255,255,0.3)' }}>SYSTEM STATUS</div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', flex: 1 }}>
+                 {[
+                   { label: 'API POOL', val: 'Online (8)' },
+                   { label: 'RPC NODE', val: 'Optimal' },
+                   { label: 'ENGINE', val: 'Active' },
+                   { label: 'UPTIME', val: '99.9%' }
+                 ].map(item => (
+                    <div key={item.label} style={{ padding: '10px', borderRadius: '12px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.03)' }}>
+                       <div style={{ fontSize: '0.45rem', color: 'rgba(255,255,255,0.2)', marginBottom: '4px' }}>{item.label}</div>
+                       <div style={{ fontSize: '0.7rem', color: '#00FFD1', fontWeight: 600 }}>{item.val}</div>
+                    </div>
+                 ))}
+              </div>
+           </motion.div>
+        </div>
 
       </motion.div>
     </section>
   )
 }
 
-// ── Mini components ───────────────────────────────────────
-
 function VolumeBars({ inView }: { inView: boolean }) {
-  const bars = [40, 65, 35, 80, 55, 90, 70, 45, 85, 60, 75, 95]
-
+  const bars = [40, 65, 35, 80, 55, 90, 70, 45, 85, 60, 75, 95, 40, 60, 80, 50, 70, 90]
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '60px' }}>
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '5px', height: '100px' }}>
       {bars.map((h, i) => (
-        <motion.div
-          key={i}
-          initial={{ scaleY: 0 }}
-          animate={inView ? { scaleY: 1 } : {}}
-          transition={{ delay: 0.6 + i * 0.05, duration: 0.5, ease: 'backOut' }}
-          style={{
-            flex: 1,
-            height: `${h}%`,
-            borderRadius: '3px 3px 0 0',
-            background: `rgba(255,184,0,${0.3 + (h / 100) * 0.7})`,
-            transformOrigin: 'bottom',
-          }}
+        <motion.div 
+          key={i} 
+          animate={{ height: inView ? [`${h}%`, `${h+10}%`, `${h}%`] : '10%' }} 
+          transition={{ repeat: Infinity, duration: 2 + Math.random(), delay: i * 0.05 }}
+          style={{ flex: 1, borderRadius: '3px', background: `rgba(255,184,0,${0.2 + (h / 100) * 0.6})` }} 
         />
       ))}
     </div>
   )
 }
 
-// Decorative glow behind trending box
 function TrendGlow() {
-  return (
-    <div style={{
-      position: 'absolute', top: -40, left: -40,
-      width: '150px', height: '150px',
-      borderRadius: '50%',
-      background: 'radial-gradient(circle, rgba(0,255,209,0.08) 0%, transparent 70%)',
-      pointerEvents: 'none',
-    }} />
-  )
+  return <div style={{ position: 'absolute', top: -50, left: -50, width: '200px', height: '200px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(0,255,209,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
 }
 
-// Decorative glow behind shield box
 function ShieldGlow() {
-  return (
-    <div style={{
-      position: 'absolute', top: '50%', left: '50%',
-      transform: 'translate(-50%, -50%)',
-      width: '140px', height: '140px',
-      borderRadius: '50%',
-      background: 'radial-gradient(circle, rgba(0,255,209,0.06) 0%, transparent 70%)',
-      pointerEvents: 'none',
-    }} />
-  )
+  return <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '200px', height: '200px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(0,255,209,0.05) 0%, transparent 70%)', pointerEvents: 'none' }} />
 }
