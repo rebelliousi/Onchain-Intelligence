@@ -1,206 +1,233 @@
 "use client";
 
-import React from 'react';
-
-// --- Mock Data ---
-const STATS = [
-  { label: "Total Revenue", value: "$45,231.89", growth: "+20.1%", icon: "💰" },
-  { label: "Active Users", value: "2,350", growth: "+15.2%", icon: "👥" },
-  { label: "Sales", value: "+12,234", growth: "+19%", icon: "📈" },
-  { label: "Active Now", value: "573", growth: "+201 since last hour", icon: "⚡" },
-];
-
-const TRANSACTIONS = [
-  { id: 1, name: "Apple Store", date: "Oct 24, 2023", amount: "-$999.00", status: "Completed" },
-  { id: 2, name: "Stripe Payout", date: "Oct 23, 2023", amount: "+$2,500.00", status: "Pending" },
-  { id: 3, name: "Zapier Inc", date: "Oct 22, 2023", amount: "-$29.00", status: "Completed" },
-];
+import React, { useLayoutEffect, useRef, useState } from 'react';
+import gsap from 'gsap';
+import { 
+  AreaChart, Area, Tooltip, ResponsiveContainer, XAxis 
+} from 'recharts';
+import { 
+  LayoutDashboard, 
+  Activity, 
+  ShieldAlert, 
+  Send, 
+  Settings, 
+  BarChart3, 
+  Zap,
+  Globe,
+  Loader2
+} from 'lucide-react';
+import { useDashboardStats, useSmartMoney } from '@/hooks/useDashboard';
 
 export default function Dashboard() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isBroadcasting, setIsAnalyzing] = useState(false);
+
+  // 1. DATA HOOKS
+  const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: smartMoney, isLoading: tableLoading } = useSmartMoney();
+
+  // 2. TELEGRAM BROADCAST LOGIC
+  const handleBroadcast = async () => {
+    setIsAnalyzing(true);
+    try {
+      const res = await fetch('/api/market/telegram-signal', { method: 'POST' });
+      if (res.ok) {
+        alert("ALPHA SIGNAL DISPATCHED TO TELEGRAM CHANNEL");
+      }
+    } catch (e) {
+      console.error("Link Failure");
+    } finally {
+      setTimeout(() => setIsAnalyzing(false), 2000);
+    }
+  };
+
+  // 3. MAP LIVE STATS
+  const STATS_CARDS = [
+    { label: "Solana 24H Volume", value: stats?.volume || "---", icon: <Globe size={16}/>, color: "#00FFD1" },
+    { label: "Top Gainer (Alpha)", value: stats?.topGainer || "Scanning...", icon: <Zap size={16}/>, color: "#8B5CF6" },
+    { label: "Neural Latency", value: stats?.latency || "---", icon: <Activity size={16}/>, color: "#FFB800" },
+    { label: "Network Load", value: (stats?.tps || "---") + " TPS", icon: <ShieldAlert size={16}/>, color: "#fff" },
+  ];
+
+  // 4. ANIMATIONS
+  useLayoutEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.from(".sidebar", { x: -100, opacity: 0, duration: 1, ease: "power4.out" });
+      gsap.from(".header-info", { y: -20, opacity: 0, duration: 0.8, delay: 0.2 });
+      gsap.from(".stat-card", { y: 20, opacity: 0, stagger: 0.1, duration: 0.6, delay: 0.4 });
+      gsap.from(".section-box", { y: 30, opacity: 0, duration: 0.8, delay: 0.6 });
+    }, containerRef);
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <div className="dashboard-container">
-      {/* --- CSS STYLES --- */}
+    <div className="aura-dashboard" ref={containerRef}>
       <style jsx global>{`
         :root {
-          --bg: #f8fafc;
-          --sidebar: #ffffff;
-          --primary: #6366f1;
-          --text-main: #1e293b;
-          --text-muted: #64748b;
-          --border: #e2e8f0;
-          --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-          --radius: 12px;
+          --aura-bg: #050505;
+          --aura-panel: rgba(255,255,255,0.03);
+          --aura-border: rgba(255,255,255,0.06);
+          --aura-teal: #00FFD1;
+          --aura-purple: #8B5CF6;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text-main); }
+        body { background: var(--aura-bg); color: #fff; margin: 0; overflow-x: hidden; }
 
-        .dashboard-container {
-          display: flex;
-          min-height: 100vh;
-        }
+        .aura-dashboard { display: flex; min-height: 100vh; }
 
-        /* Sidebar Styling */
+        /* Sidebar */
         .sidebar {
           width: 260px;
-          background: var(--sidebar);
-          border-right: 1px solid var(--border);
-          padding: 2rem 1.5rem;
+          background: rgba(0,0,0,0.4);
+          border-right: 1px solid var(--aura-border);
+          padding: 2.5rem 1.5rem;
           display: flex;
           flex-direction: column;
-          position: sticky;
-          top: 0;
-          height: 100vh;
+          gap: 2rem;
+          backdrop-filter: blur(10px);
         }
 
-        .logo { font-size: 1.5rem; font-weight: 800; color: var(--primary); margin-bottom: 2.5rem; display: flex; align-items: center; gap: 8px; }
-        
-        .nav-list { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+        .logo { font-size: 1.5rem; font-weight: 900; color: var(--aura-teal); letter-spacing: 0.3em; display: flex; align-items: center; gap: 12px; }
         .nav-item { 
-          padding: 0.75rem 1rem; 
-          border-radius: var(--radius); 
-          cursor: pointer; 
-          color: var(--text-muted); 
-          transition: 0.2s;
-          font-weight: 500;
+          display: flex; align-items: center; gap: 12px; padding: 0.8rem 1rem; 
+          border-radius: 12px; color: rgba(255,255,255,0.4); cursor: pointer; transition: 0.3s;
+          font-size: 0.85rem; font-weight: 500;
         }
-        .nav-item:hover { background: #f1f5f9; color: var(--primary); }
-        .nav-item.active { background: #eef2ff; color: var(--primary); }
+        .nav-item:hover, .nav-item.active { background: var(--aura-panel); color: var(--aura-teal); }
 
-        /* Main Content Styling */
-        .main-content {
-          flex: 1;
-          padding: 2rem 3rem;
+        /* Main Content */
+        .main-content { flex: 1; padding: 3rem; position: relative; }
+
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3rem; }
+        .header-info h1 { font-size: 2rem; font-weight: 800; letter-spacing: -1px; }
+
+        /* Broadcast Button */
+        .btn-broadcast {
+          background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3);
+          color: var(--aura-purple); padding: 12px 24px; border-radius: 100px;
+          font-weight: 700; font-size: 0.7rem; letter-spacing: 0.2em; cursor: pointer;
+          display: flex; align-items: center; gap: 10px; transition: 0.3s;
         }
+        .btn-broadcast:hover { background: var(--aura-purple); color: #fff; box-shadow: 0 0 20px rgba(139,92,246,0.4); }
 
-        .header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 2.5rem;
+        /* Stats */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 2rem; }
+        .stat-card { 
+          background: var(--aura-panel); border: 1px solid var(--aura-border); padding: 1.5rem; 
+          border-radius: 20px; transition: 0.3s;
         }
+        .stat-card:hover { border-color: var(--aura-teal); transform: translateY(-5px); }
+        .stat-label { font-size: 0.65rem; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; display: block; }
+        .stat-value { font-size: 1.4rem; font-weight: 700; font-family: 'Monospace', courier; }
 
-        .user-pill {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          background: white;
-          padding: 6px 16px 6px 6px;
-          border-radius: 50px;
-          border: 1px solid var(--border);
-        }
-        .avatar { width: 32px; height: 32px; background: var(--primary); border-radius: 50%; color: white; display: grid; place-items: center; font-size: 0.8rem; font-weight: bold; }
-
-        /* Grid Layout */
-        .stats-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-          gap: 1.5rem;
-          margin-bottom: 2.5rem;
+        /* Sections */
+        .section-box { 
+          background: var(--aura-panel); border: 1px solid var(--aura-border); 
+          border-radius: 24px; padding: 2rem; margin-bottom: 2rem;
         }
 
-        .card {
-          background: white;
-          padding: 1.5rem;
-          border-radius: var(--radius);
-          border: 1px solid var(--border);
-          box-shadow: var(--shadow);
-        }
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+        .data-table th { text-align: left; padding: 1rem; color: rgba(255,255,255,0.2); font-size: 0.7rem; text-transform: uppercase; border-bottom: 1px solid var(--aura-border); }
+        .data-table td { padding: 1.2rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 0.85rem; }
 
-        .card-header { display: flex; justify-content: space-between; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem; }
-        .card-value { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.5rem; }
-        .card-trend { font-size: 0.85rem; color: #10b981; font-weight: 600; }
-
-        /* Table Section */
-        .section-white {
-          background: white;
-          border-radius: var(--radius);
-          border: 1px solid var(--border);
-          padding: 1.5rem;
-        }
-
-        .section-title { margin-bottom: 1.5rem; font-size: 1.1rem; font-weight: 700; }
-
-        .data-table { width: 100%; border-collapse: collapse; }
-        .data-table th { text-align: left; padding: 1rem; border-bottom: 1px solid var(--border); color: var(--text-muted); font-weight: 500; font-size: 0.9rem; }
-        .data-table td { padding: 1rem; border-bottom: 1px solid var(--border); font-size: 0.95rem; }
-        
-        .status-badge {
-          padding: 4px 10px;
-          border-radius: 20px;
-          font-size: 0.75rem;
-          font-weight: 600;
-          background: #f1f5f9;
-        }
-
-        @media (max-width: 1024px) {
-          .sidebar { width: 80px; padding: 2rem 0.5rem; align-items: center; }
-          .nav-item span, .logo span { display: none; }
-          .main-content { padding: 1.5rem; }
-        }
+        @media (max-width: 1100px) { .stats-grid { grid-template-columns: 1fr 1fr; } }
       `}</style>
 
       {/* --- SIDEBAR --- */}
       <aside className="sidebar">
         <div className="logo">
-          <span>🚀</span> <span>DashCore</span>
+           <div style={{ width: '12px', height: '12px', background: 'var(--aura-teal)', borderRadius: '50%', boxShadow: '0 0 10px var(--aura-teal)' }} />
+           <span>AURA</span>
         </div>
-        <ul className="nav-list">
-          <li className="nav-item active">🏠 <span>Overview</span></li>
-          <li className="nav-item">📊 <span>Analytics</span></li>
-          <li className="nav-item">💳 <span>Payments</span></li>
-          <li className="nav-item">⚙️ <span>Settings</span></li>
-        </ul>
+        <nav className="nav-list">
+           <div className="nav-item active"><LayoutDashboard size={18}/> <span>Intelligence</span></div>
+           <div className="nav-item"><BarChart3 size={18}/> <span>Market Flow</span></div>
+           <div className="nav-item"><Send size={18}/> <span>Signals</span></div>
+           <div className="nav-item"><Settings size={18}/> <span>Node Config</span></div>
+        </nav>
       </aside>
 
       {/* --- MAIN CONTENT --- */}
       <main className="main-content">
         <header className="header">
-          <div>
-            <h1>Dashboard</h1>
-            <p style={{ color: 'var(--text-muted)' }}>Welcome back, Alex.</p>
+          <div className="header-info">
+            <h1>System Overview</h1>
+            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.9rem' }}>Protocol status: <span style={{ color: 'var(--aura-teal)' }}>Operational</span></p>
           </div>
-          <div className="user-pill">
-            <div className="avatar">AD</div>
-            <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>Alex Doe</span>
-          </div>
+          
+          <button className="btn-broadcast" onClick={handleBroadcast} disabled={isBroadcasting}>
+            {isBroadcasting ? <Loader2 size={14} className="animate-spin"/> : <Send size={14}/>}
+            {isBroadcasting ? "DISPATCHING..." : "BROADCAST ALPHA"}
+          </button>
         </header>
 
         {/* --- STATS GRID --- */}
         <div className="stats-grid">
-          {STATS.map((stat, i) => (
-            <div key={i} className="card">
-              <div className="card-header">
-                <span>{stat.label}</span>
-                <span>{stat.icon}</span>
+          {STATS_CARDS.map((stat, i) => (
+            <div key={i} className="stat-card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <span className="stat-label">{stat.label}</span>
+                <span style={{ color: stat.color }}>{stat.icon}</span>
               </div>
-              <div className="card-value">{stat.value}</div>
-              <div className="card-trend">{stat.growth}</div>
+              <div className="stat-value">{stat.value}</div>
             </div>
           ))}
         </div>
 
-        {/* --- TABLE SECTION --- */}
-        <div className="section-white">
-          <h2 className="section-title">Recent Transactions</h2>
+        {/* --- CHART SECTION --- */}
+        <div className="section-box">
+           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ fontSize: '1rem', fontWeight: 800 }}>Neural Throughput</h2>
+              <span style={{ fontSize: '0.6rem', color: 'var(--aura-teal)', letterSpacing: '2px' }}>LIVE PULSE</span>
+           </div>
+           <div style={{ height: '300px', marginTop: '2rem' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={stats?.chartData || []}>
+                  <defs>
+                    <linearGradient id="colorLoad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--aura-teal)" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="var(--aura-teal)" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <Tooltip contentStyle={{ background: '#000', border: '1px solid var(--aura-border)' }} />
+                  <Area type="monotone" dataKey="load" stroke="var(--aura-teal)" strokeWidth={2} fill="url(#colorLoad)" />
+                </AreaChart>
+              </ResponsiveContainer>
+           </div>
+        </div>
+
+        {/* --- SMART MONEY TABLE --- */}
+        <div className="section-box">
+          <h2 style={{ fontSize: '1rem', fontWeight: 800 }}>Smart Money Accumulation</h2>
           <table className="data-table">
             <thead>
               <tr>
-                <th>Merchant</th>
-                <th>Date</th>
-                <th>Amount</th>
-                <th>Status</th>
+                <th>Target Asset</th>
+                <th>24H Net Profit</th>
+                <th>Win Rate</th>
+                <th>Cluster Load</th>
               </tr>
             </thead>
             <tbody>
-              {TRANSACTIONS.map((t) => (
-                <tr key={t.id}>
-                  <td style={{ fontWeight: 500 }}>{t.name}</td>
-                  <td style={{ color: 'var(--text-muted)' }}>{t.date}</td>
-                  <td style={{ fontWeight: 600 }}>{t.amount}</td>
-                  <td><span className="status-badge">{t.status}</span></td>
-                </tr>
-              ))}
+              {tableLoading ? (
+                <tr><td colSpan={4} style={{ textAlign: 'center', padding: '40px', opacity: 0.2 }}>SYNCING NETWORK...</td></tr>
+              ) : (
+                smartMoney?.map((t, idx) => (
+                  <tr key={idx}>
+                    <td style={{ fontWeight: 700, color: 'var(--aura-teal)' }}>{t.symbol}</td>
+                    <td style={{ fontWeight: 600 }}>{t.profit}</td>
+                    <td style={{ color: 'var(--aura-purple)', fontWeight: 600 }}>{t.winRate}</td>
+                    <td style={{ width: '200px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ flex: 1, height: '3px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', overflow: 'hidden' }}>
+                           <div style={{ width: `${t.load}%`, height: '100%', background: 'var(--aura-teal)' }} />
+                        </div>
+                        <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.2)' }}>{t.load}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

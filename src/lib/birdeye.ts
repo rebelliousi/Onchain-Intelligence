@@ -12,7 +12,8 @@ type BirdeyeSection =
   | 'PULSE'     // Used for 3D Carousel
   | 'DASHBOARD' // Used for Pro Table
   | 'AI'        // Used for Chatbot
-  | 'GAINER';   // Used for Gainer List
+  | 'GAINER'  // Used for Gainer List
+  | 'TELEGRAM';
 
 export async function fetchFromBirdeye(
   endpoint: string, 

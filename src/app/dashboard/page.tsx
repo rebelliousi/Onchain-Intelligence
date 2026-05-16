@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useLayoutEffect, useRef } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
+import { motion } from 'framer-motion';
 import { 
   AreaChart, 
   Area, 
@@ -9,15 +10,33 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 import { useDashboardStats, useSmartMoney } from '@/hooks/useDashboard';
+import { Send, Radio } from 'lucide-react';
 
 export default function AuraDashboard() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
   
   // 1. FETCH LIVE BLOCKCHAIN DATA
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const { data: smartMoney, isLoading: tableLoading } = useSmartMoney();
 
-  // 2. MAP LIVE DATA TO UI CARDS
+  // 2. TELEGRAM BROADCAST LOGIC
+  const handleTelegramBroadcast = async () => {
+    setIsBroadcasting(true);
+    try {
+      const response = await fetch('/api/market/telegram-signal', { method: 'POST' });
+      if (response.ok) {
+        console.log("Alpha Signal Transmitted.");
+      }
+    } catch (error) {
+      console.error("Broadcast interruption.", error);
+    } finally {
+      // Return button to normal after 2 seconds
+      setTimeout(() => setIsBroadcasting(false), 2000);
+    }
+  };
+
+  // 3. MAP LIVE DATA TO UI CARDS
   const STATS_CARDS = [
     { 
       label: "Solana 24H Volume", 
@@ -49,7 +68,7 @@ export default function AuraDashboard() {
     },
   ];
 
-  // 3. ENTRANCE ANIMATIONS
+  // 4. ENTRANCE ANIMATIONS
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
       gsap.from(".header-content", { y: -20, opacity: 0, duration: 1, ease: "power4.out" });
@@ -145,8 +164,13 @@ export default function AuraDashboard() {
           font-weight: 600; 
           cursor: pointer; 
           transition: 0.3s;
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
         .btn-aura:hover { background: var(--color-teal); color: #000; box-shadow: 0 0 20px var(--color-teal); }
+        .btn-broadcasting { border-color: var(--color-purple); color: var(--color-purple); }
+        .btn-broadcasting:hover { background: var(--color-purple); color: #fff; box-shadow: 0 0 20px var(--color-purple); }
       `}</style>
 
       {/* --- NAVBAR --- */}
@@ -156,7 +180,20 @@ export default function AuraDashboard() {
             <div style={{ width: '20px', height: '20px', background: 'var(--color-teal)', borderRadius: '50%', boxShadow: '0 0 15px var(--color-teal)' }}></div>
             <span>AURA</span>
           </a>
-          <button className="btn-aura">Sync Complete</button>
+          
+          {/* REPLACED SYNC COMPLETE WITH TELEGRAM BUTTON */}
+          <button 
+            onClick={handleTelegramBroadcast}
+            disabled={isBroadcasting}
+            className={`btn-aura ${isBroadcasting ? 'btn-broadcasting' : ''}`}
+          >
+            {isBroadcasting ? (
+              <Radio size={14} className="animate-pulse" />
+            ) : (
+              <Send size={14} />
+            )}
+            {isBroadcasting ? "BROADCASTING..." : "BROADCAST ALPHA"}
+          </button>
         </div>
       </nav>
 
@@ -222,13 +259,7 @@ export default function AuraDashboard() {
 
           <table className="table">
             <thead>
-              <tr>
-                <th>Rank</th>
-                <th>Asset</th>
-                <th>Profit (24H)</th>
-                <th>Win Rate</th>
-                <th>Cluster Load</th>
-              </tr>
+              <tr><th>Rank</th><th>Asset</th><th>Profit (24H)</th><th>Win Rate</th><th>Cluster Load</th></tr>
             </thead>
             <tbody>
               {tableLoading ? (
